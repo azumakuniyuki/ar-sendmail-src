@@ -1,0 +1,218 @@
+---
+#                     _                 _ _  __          __     ___            _        
+#  ___  ___ _ __   __| |_ __ ___   __ _(_) |/ /__ _ __ __\ \   / / |_ __ _ ___| | _____ 
+# / __|/ _ \ '_ \ / _` | '_ ` _ \ / _` | | | / __| '__/ __| | / /| __/ _` / __| |/ / __|
+# \__ \  __/ | | | (_| | | | | | | (_| | | | \__ \ | | (__| |/ / | || (_| \__ \   <\__ \
+# |___/\___|_| |_|\__,_|_| |_| |_|\__,_|_|_| |___/_|  \___| /_/   \__\__,_|___/_|\_\___/
+#                                           \_\          /_/                            
+# make-config
+- name: make-config | virtmail | Each directory should be created
+  file:
+    path:  "{{ procmail.install }}/{{ item }}"
+    mode:  "0755"
+    owner: "root"
+    state: "directory"
+  with_items:
+    - "etc"
+    - "etc/rcs"
+
+#  ____ ____ ____ ____ ____ ____ ____ ____ 
+# ||p |||r |||o |||c |||m |||a |||i |||l ||
+# ||__|||__|||__|||__|||__|||__|||__|||__||
+# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+#
+- name: make-config | procmail | Log file should be created(1)
+  register: procmaillog
+  ignore_errors: true
+  file:
+    path:  "/var/log/procmail-local.log"
+    mode:  "0600"
+    owner: "root"
+    state: "file"
+
+- name: make-config | procmail | Log file should be created(2)
+  when: procmaillog|failed
+  file:
+    path:  "/var/log/procmail-local.log"
+    mode:  "0600"
+    owner: "root"
+    state: "touch"
+
+- name: make-config | procmail spool directory should have been created
+  file:
+    path:  "{{ procmail.spool }}"
+    mode:  "0770"
+    owner: "root"
+    group: "{{ sendmail.user.mta.group }}"
+    state: "directory"
+
+#  ____ ____ ____ ____ ____ ____ ____ ____ 
+# ||m |||a |||i |||l |||d |||r |||o |||p ||
+# ||__|||__|||__|||__|||__|||__|||__|||__||
+# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+#
+- name: make-config | maildrop | Log file should be created(1)
+  register: maildroplog
+  ignore_errors: true
+  file:
+    path:  "/var/log/maildrop-virtual.log"
+    mode:  "0600"
+    owner: "{{ sendmail.user.mda.username }}"
+    state: "file"
+
+- name: make-config | maildrop | Log file should be created(2)
+  when: maildroplog|failed
+  file:
+    path:  "/var/log/maildrop-virtual.log"
+    mode:  "0600"
+    owner: "{{ sendmail.user.mda.username }}"
+    state: "touch"
+
+- name: make-config | /root/Maildir directories should have been created
+  file:
+    path:  "/root/Maildir/{{ item }}"
+    mode:  "0700"
+    state: "directory"
+  with_items: ["cur", "new", "tmp"]
+
+- name: make-config | /etc/skel/Maildir directories should have been created
+  file:
+    path:  "/etc/skel/Maildir/{{ item }}"
+    mode:  "0700"
+    state: "directory"
+  with_items: ["cur", "new", "tmp"]
+
+#  ____ ____ ____ ____ ____ ____ ____ ____ 
+# ||s |||e |||n |||d |||m |||a |||i |||l ||
+# ||__|||__|||__|||__|||__|||__|||__|||__||
+# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+#
+- name: make-config | MTA Queue directories should have been created
+  file:
+    path:  "{{ sendmail.conf.mtaqueue }}/q.{{ item }}"
+    mode:  "0700"
+    owner: "root"
+    group: "{{ sendmail.user.mta.group }}"
+    state: "directory"
+  with_items: ["0", "1", "2", "3"]
+
+- name: make-config | MSP Queue directories should have been created
+  file:
+    path:  "{{ sendmail.conf.msaqueue }}"
+    mode:  "0770"
+    owner: "{{ sendmail.user.msa.username }}"
+    group: "{{ sendmail.user.msa.group }}"
+    state: "directory"
+
+- name: make-config | {{ sendmail.conf.statfile }} should be created(0)
+  register: sendmail_st
+  changed_when: sendmail_st.rc > 0
+  ignore_errors: true
+  shell: test -e {{ sendmail.conf.statfile }}
+
+- name: make-config | {{ sendmail.conf.statfile }} should be created(1)
+  when: sendmail_st|failed
+  file:
+    path:  "{{ sendmail.conf.statfile }}"
+    owner: "root"
+    mode:  "0644"
+    state: "touch"
+
+- name: make-config | {{ sendmail.conf.hoststat }} should be created
+  file:
+    path:  "{{ sendmail.conf.hoststat }}"
+    owner: "root"
+    mode:  "0755"
+    state: "directory"
+
+- name: make-config | /usr/sbin/smtpd should be created
+  file:
+    src:   "/usr/sbin/sendmail"
+    path:  "/usr/sbin/smtpd"
+    state: "link"
+
+- name: make-config | /var/adm/sm.bin should be created
+  file:
+    path:  "/var/adm/sm.bin"
+    mode:  "0751"
+    owner: "root"
+    state: "directory"
+
+- name: make-config | Makefile should be deployed into {{ sendmail.configroot }}/
+  template:
+    src:  "etc/mail/Makefile.j2"
+    dest: "{{ sendmail.configroot }}/Makefile"
+
+- name: make-config | Source code directory tree should be linked
+  file:
+    src:   "{{ sendmail.workingdir }}/sendmail-{{ sendmail.version }}/"
+    dest:  "{{ sendmail.configroot }}/src"
+    force: "yes"
+    owner: "root"
+    state: "link"
+
+- name: make-config | submit.mc file should be deployed
+  register: submitmc
+  template:
+    src:   "etc/mail/submit.mc.j2"
+    dest:  "{{ sendmail.configroot }}/src/cf/cf/submit.mc"
+    owner: "root"
+    group: "{{ sendmail.user.msa.group }}"
+
+- name: make-config | sendmail.mc file should be deployed
+  register: sendmailmc
+  template:
+    src:   "etc/mail/sendmail.mc.j2"
+    dest:  "{{ sendmail.configroot }}/src/cf/cf/sendmail.mc"
+    owner: "root"
+    group: "{{ sendmail.user.mta.group }}"
+
+- name: make-config | virtmail.m4 file should be deployed
+  register: virtmailm4
+  template:
+    src:  "etc/mail/virtmail.m4.j2"
+    dest: "{{ sendmail.configroot }}/src/cf/mailer/virtmail.m4"
+
+- name: make-config | DB files should be deployed into {{ sendmail.configroot }}
+  register: deploy_dbmap_files
+  template:
+    src:    "etc/mail/{{ item }}.j2"
+    dest:   "{{ sendmail.configroot }}/{{ item }}"
+    backup: "yes"
+  with_items: 
+    - "{{ sendmail.conf.dbmapfiles }}"
+
+- name: make-config | Class files should be deployed into {{ sendmail.configroot }}
+  template:
+    src:    "etc/mail/{{ item }}.j2"
+    dest:   "{{ sendmail.configroot }}/{{ item }}"
+    backup: "yes"
+  with_items: 
+    - "{{ sendmail.conf.classfiles }}"
+    - "{{ sendmail.conf.parameters }}"
+
+- name: make-config | makemap(8) should be executed
+  when: deploy_dbmap_files|changed
+  ignore_errors: true
+  shell: >
+    make {{ item }}.db
+  args:
+    chdir: "{{ sendmail.configroot }}"
+  with_items:
+    - "{{ sendmail.conf.dbmapfiles }}"
+
+- name: make-config | files should be deployed into {{ procmail.install }}
+  template:
+    src:  "etc/mail/{{ item }}.j2"
+    dest: "{{ procmail.install}}/etc/{{ item }}"
+  with_items:
+    - "maildroprc"
+    - "procmailrc"
+
+- name: make-config | SMTP-AUTH configuraiton file should be deployed
+  template:
+    src:   "usr/lib/sasl2/Sendmail.conf.j2"
+    dest:  "/etc/sasl2/Sendmail.conf"
+    mode:  "0644"
+    owner: "root"
+

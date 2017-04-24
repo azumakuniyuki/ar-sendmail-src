@@ -1,0 +1,80 @@
+---
+#                     _                 _ _  __          __     ___            _        
+#  ___  ___ _ __   __| |_ __ ___   __ _(_) |/ /__ _ __ __\ \   / / |_ __ _ ___| | _____ 
+# / __|/ _ \ '_ \ / _` | '_ ` _ \ / _` | | | / __| '__/ __| | / /| __/ _` / __| |/ / __|
+# \__ \  __/ | | | (_| | | | | | | (_| | | | \__ \ | | (__| |/ / | || (_| \__ \   <\__ \
+# |___/\___|_| |_|\__,_|_| |_| |_|\__,_|_|_| |___/_|  \___| /_/   \__\__,_|___/_|\_\___/
+#                                           \_\          /_/                            
+# get-archive
+- name: get-archive | procmail-{{ procmail.version }} should be downloaded
+  ignore_errors: true
+  register: get_procmail
+  get_url:
+    url:  "ftp://ftp.ring.gr.jp/pub/net/mail/procmail/procmail-{{ procmail.version }}.tar.gz"
+    dest: "{{ sendmail.workingdir }}/procmail-{{ procmail.version }}.tar.gz"
+
+- name: get-archive | procmail-{{ procmail.verison }}.tar.gz should be extracted
+  when: get_procmail|failed
+  copy:
+    src:  "procmail-{{ procmail.version }}.tar.gz"
+    dest: "{{ sendmail.workingdir }}"
+
+- name: get-archive | procmail-{{ procmail.version }}.tar.gz should be extracted
+  unarchive:
+    src:     "{{ sendmail.workingdir }}/procmail-{{ procmail.version }}.tar.gz"
+    dest:    "{{ sendmail.workingdir }}"
+    creates: "{{ sendmail.workingdir }}/procmail-{{ procmail.version }}"
+    copy:    "no"
+
+- name: get-archive | Courier unicode library should be downloded
+  ignore_errors: true
+  register: get_courier_unicode_lib
+  get_url:
+    url:  "http://jaist.dl.sourceforge.net/project/courier/courier-unicode/1.4/courier-unicode-1.4.tar.bz2"
+    dest: "{{ sendmail.workingdir }}/courier-unicode-1.4.tar.bz2"
+
+- name: get-archive | courier-unicode-1.4.tar.bz2 should be extracted
+  when: get_courier_unicode_lib|failed
+  copy:
+    src:  "courier-unicode-1.4.tar.bz2"
+    dest: "{{ sendmail.workingdir }}"
+
+- name: get-archive | courier-unicode-1.4.tar.bz2 should be extracted
+  unarchive:
+      src:     "{{ sendmail.workingdir }}/courier-unicode-1.4.tar.bz2"
+      dest:    "{{ sendmail.workingdir }}"
+      creates: "{{ sendmail.workingdir }}/courier-unicode-1.4"
+      copy:    "no"
+
+- name: get-archive | maildrop {{ maildrop.version }} should be downloaded
+  ignore_errors: true
+  register: get_maildrop
+  get_url:
+    url:  "http://jaist.dl.sourceforge.net/project/courier/maildrop/{{ maildrop.version }}/maildrop-{{ maildrop.version }}.tar.bz2"
+    dest: "{{ sendmail.workingdir }}/maildrop-{{ maildrop.version }}.tar.bz2"
+
+- name: get-archive | maildrop-{{ maildrop.verison }}.tar.bz2 should be deployed
+  when: get_maildrop|failed
+  copy:
+    src:  "maildrop-{{ maildrop.version }}.tar.bz2"
+    dest: "{{ sendmail.workingdir }}"
+
+- name: get-archive | maildrop-{{ maildrop.version }}.tar.bz2 should be extracted
+  unarchive:
+    src:     "{{ sendmail.workingdir }}/maildrop-{{ maildrop.version }}.tar.bz2"
+    dest:    "{{ sendmail.workingdir }}"
+    creates: "{{ sendmail.workingdir }}/maildrop-{{ maildrop.version }}"
+    copy:    "no"
+
+- name: get-archive | sendmail-{{ sendmail.version }} should be deployed
+  copy:
+    src:  "sendmail.{{ sendmail.version }}.tar.gz"
+    dest: "{{ sendmail.workingdir }}"
+
+- name: get-archive | sendmail-{{ sendmail.version }} should be extracted
+  unarchive:
+    src:     "{{ sendmail.workingdir }}/sendmail.{{ sendmail.version }}.tar.gz"
+    dest:    "{{ sendmail.workingdir }}"
+    creates: "{{ sendmail.workingdir }}/sendmail-{{ sendmail.version }}"
+    copy:    "no"
+

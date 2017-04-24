@@ -1,0 +1,104 @@
+---
+#                     _                 _ _  __          __     __  _       __             _ _       
+#  ___  ___ _ __   __| |_ __ ___   __ _(_) |/ /__ _ __ __\ \   / /_| | ___ / _| __ _ _   _| | |_ ___ 
+# / __|/ _ \ '_ \ / _` | '_ ` _ \ / _` | | | / __| '__/ __| | / / _` |/ _ \ |_ / _` | | | | | __/ __|
+# \__ \  __/ | | | (_| | | | | | | (_| | | | \__ \ | | (__| |/ / (_| |  __/  _| (_| | |_| | | |_\__ \
+# |___/\___|_| |_|\__,_|_| |_| |_|\__,_|_|_| |___/_|  \___| /_/ \__,_|\___|_|  \__,_|\__,_|_|\__|___/
+#                                           \_\          /_/                                         
+# defaults file for ar-sendmail-src
+sendmail:
+  started: true
+  rebuild: false
+  version: "8.14.9"
+  updateonly: false
+  initscript: "sendmail"
+  configroot: "/etc/mail"
+  workingdir: "/usr/local/src"
+  packages:
+    redhat:
+      install:
+        - "db4"
+        - "db4-devel"
+        - "pcre"
+        - "pcre-devel"
+        - "openssl-devel"
+        - "cyrus-sasl-lib"
+        - "cyrus-sasl-devel"
+        - "cyrus-sasl-md5"
+        - "cyrus-sasl-plain"
+        - "cyrus-sasl-ntlm"
+        - "sendmail"
+        - "sendmail-devel"
+        - "open-sendmail"
+        - "sendmail-cf"
+        - "sendmail-milter"
+  conf:
+    ostype: "linux"
+    mtaqueue: "/var/spool/queues"
+    msaqueue: "/var/spool/cqueue"
+    hoststat: "/var/spool/hoststat"
+    statfile: "/var/tmp/sendmail.st"
+    queue_interval: "6m"
+    daemon_options: "-Lsm-mta"
+    parameters:
+      - "daemon-options"
+      - "queue-interval"
+      - "sid-options"
+      - "sid-pass-domains"
+      - "sid-peer-hosts"
+    classfiles:
+      - "generics-domains"
+      - "local-host-names"
+      - "masquerade-domains"
+      - "relay-domains"
+      - "trusted-users"
+      - "virtuser-domains"
+    dbmapfiles:
+      - "access"
+      - "aliases"
+      - "authinfo"
+      - "genericstable"
+      - "mailertable"
+      - "virtusertable"
+  user:
+    mta:
+      username: "sendmail"
+      uid: "625"
+      gid: "625"
+      home: "/var/spool/queues"
+      group: "sendmail"
+      shell: "/sbin/nolgin"
+      comment: "Sendmail"
+    msa:
+      username: "smsubmit"
+      uid: "587"
+      gid: "587"
+      home: "/var/spool/cqueue"
+      group: "smsubmit"
+      shell: "/sbin/nologin"
+      comment: "'Sendmail Submission'"
+    mda:
+      username: "virtmail"
+      uid: "660"
+      gid: "660"
+      home: "/home/virtmail"
+      group: "virtmail"
+      shell: "/bin/sh"
+      comment: "'Virtual Mailbox'"
+procmail:
+  rebuild: false
+  version: "3.22"
+  install: "/opt/virtmail"
+  spool: "/opt/virtmail/var/spool"
+maildrop:
+  rebuild: false
+  version: "2.7.1"
+  install: "/opt/virtmail"
+  spool: "/opt/vartmail/var/spool"
+virtmail:
+  install: "/opt/virtmail"
+email:
+  creatembox: false
+  accounts:
+    - { address: "kijitora@example.jp", password: "nekochan" }
+

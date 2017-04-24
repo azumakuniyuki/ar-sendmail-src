@@ -1,0 +1,77 @@
+---
+#                     _                 _ _  __          __     ___            _        
+#  ___  ___ _ __   __| |_ __ ___   __ _(_) |/ /__ _ __ __\ \   / / |_ __ _ ___| | _____ 
+# / __|/ _ \ '_ \ / _` | '_ ` _ \ / _` | | | / __| '__/ __| | / /| __/ _` / __| |/ / __|
+# \__ \  __/ | | | (_| | | | | | | (_| | | | \__ \ | | (__| |/ / | || (_| \__ \   <\__ \
+# |___/\___|_| |_|\__,_|_| |_| |_|\__,_|_|_| |___/_|  \___| /_/   \__\__,_|___/_|\_\___/
+#                                           \_\          /_/                            
+# boot-script
+- block:
+    - name: boot-script | RedHat | /etc/init.d/{{ sendmail.initscript }} should be deployed
+      when: ansible_distribution_major_version < 7
+      template:
+        src:   "etc/init.d/sendmail.RedHat.j2"
+        dest:  "/etc/init.d/{{ sendmail.initscript }}"
+        group: "root"
+        owner: "root"
+        mode:  "0755"
+
+    - name: boot-script | RedHat | /etc/rc.d/init.d/{{ sendmail.initscript }} should be created
+      when: ansible_distribution_major_version < 7
+      shell: >
+        /sbin/chkconfig --add {{ sendmail.initscript }}
+      args:
+        creates: "/etc/rc.d/rc0.d/K30{{ sendmail.initscript }}"
+
+    - name: boot-script | RedHat | /usr/lib/systemd/system/{{ sendmail.initscript }}.service should be deployed
+      when: ansible_distribution_major_version > 6
+      register: deploy_sendmail_service_unit
+      template:
+        src:   "usr/lib/systemd/system/sendmail.service.j2"
+        dest:  "/usr/lib/systemd/system/{{ sendmail.initscript }}.service"
+        mode:  "0644"
+        owner: "root"
+        group: "root"
+
+    - name: boot-script | RedHat | {{ sendmail.initscript }} should be reloaded
+      when: ansible_distribution_major_version > 6 and deploy_sendmail_service_unit|changed
+      shell: systemctl daemon-reload
+
+    - name: boot-script | RedHat | Deploy /etc/sysconfig/{{ sendmail.initscript }} should be deployed
+      when: ansible_distribution_major_version > 6
+      register: deploy_sendmail_sysconfig
+      notify: Restart Sendmail
+      template:
+        src:    "etc/sysconfig/sendmail.j2"
+        dest:   "/etc/sysconfig/{{ sendmail.initscript }}"
+        backup: "yes"
+
+    - name: boot-script | RedHat | {{ sendmail.initscript }} should be reloaded
+      when: ansible_distribution_major_version > 6 and deploy_sendmail_sysconfig|changed
+      shell: systemctl daemon-reload
+  when: ansible_os_family == "RedHat"
+
+- name: boot-script | Sendmail should be enabled
+  service:
+    name:    "{{ sendmail.initscript }}"
+    enabled: "yes"
+
+- name: boot-script | Postfix should be stopped
+  ignore_errors: true
+  service:
+    name:    "postfix"
+    enabled: "no"
+    state:   "stopped"
+
+- name: boot-script | Sendmail should be started
+  when: sendmail.started == true
+  service:
+    name:  "{{ sendmail.initscript }}"
+    state: "started"
+
+- name: boot-script | Sendmail should be stopped
+  when: sendmail.started == false
+  service:
+    name:  "{{ sendmail.initscript }}"
+    state: "stopped"
+

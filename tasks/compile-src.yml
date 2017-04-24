@@ -1,0 +1,222 @@
+---
+#                     _                 _ _  __          __     ___            _        
+#  ___  ___ _ __   __| |_ __ ___   __ _(_) |/ /__ _ __ __\ \   / / |_ __ _ ___| | _____ 
+# / __|/ _ \ '_ \ / _` | '_ ` _ \ / _` | | | / __| '__/ __| | / /| __/ _` / __| |/ / __|
+# \__ \  __/ | | | (_| | | | | | | (_| | | | \__ \ | | (__| |/ / | || (_| \__ \   <\__ \
+# |___/\___|_| |_|\__,_|_| |_| |_|\__,_|_|_| |___/_|  \___| /_/   \__\__,_|___/_|\_\___/
+#                                           \_\          /_/                            
+# compile-src
+- name: compile-src | procmail | Patch files for procmail should be deployed
+  template:
+    src:    "usr/local/src/{{ item }}.j2"
+    dest:   "{{ sendmail.workingdir }}/procmail-{{ procmail.version }}/{{ item }}"
+    backup: "no"
+  with_items:
+    - "procmail-conflict-types-for-getline.patch"
+    - "procmail-localconfig.patch"
+
+- name: compile-src | procmail | Patches for procmail should be applied
+  shell: >
+    patch -p0 < ./{{ item }}
+  args:
+    chdir:   "{{ sendmail.workingdir }}/procmail-{{ procmail.version }}"
+    creates: "{{ item }}.ok"
+  with_items:
+    - "procmail-conflict-types-for-getline.patch"
+    - "procmail-localconfig.patch"
+
+- name: compile-src | procmail | REBUILD | make clean
+  when: procmail.rebuild == true
+  shell: make clean
+  args:
+    chdir:   "{{ sendmail.workingdir }}/procmail-{{ procmail.version }}/"
+    removes: "src/procmail"
+
+- name: compile-src | procmail | procmail {{ procmail.version }} should be compiled
+  register: make_procmail_binary
+  shell: echo | make
+  args:
+    chdir:   "{{ sendmail.workingdir }}/procmail-{{ procmail.version }}"
+    creates: "src/procmail"
+
+- name: compile-src | procmail | procmail {{ procmail.version }} should be installed
+  when: make_procmail_binary.changed
+  shell: make install
+  args:
+    chdir: "{{ sendmail.workingdir }}/procmail-{{ procmail.version }}"
+
+- name: compile-src | procmail | procmail binaries should be stripped
+  when: make_procmail_binary.changed
+  shell: strip ./bin/{{ item }}
+  args:
+    chdir: "{{ procmail.install }}"
+  with_items:
+    - "formail"
+    - "lockfile"
+    - "procmail"
+
+#  ____ ____ ____ ____ ____ ____ ____ ____ 
+# ||m |||a |||i |||l |||d |||r |||o |||p ||
+# ||__|||__|||__|||__|||__|||__|||__|||__||
+# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+#
+- name: compile-src | maildrop | courier-unicode should be configured
+  shell: >
+    /bin/sh ./configure --prefix={{ maildrop.install }}
+  args:
+    chdir:   "{{ sendmail.workingdir }}/courier-unicode-1.4"
+    creates: "Makefile"
+
+- name: compile-src | maildrop | courier-unicode should be compiled
+  register: make_courier_unicode_binary
+  shell: make
+  args:
+    chdir:   "{{ sendmail.workingdir }}/courier-unicode-1.4"
+    creates: "unicode.o"
+
+- name: compile-src | maildrop | courier-unicode should be installed
+  when: make_courier_unicode_binary.changed
+  shell: make install-strip
+  args:
+    chdir: "{{ sendmail.workingdir }}/courier-unicode-1.4"
+
+- name: compile-src | maildrop | REBUILD | make clean
+  when: maildrop.rebuild == true
+  shell: make clean
+  args:
+    chdir:   "{{ sendmail.workingdir }}/maildrop-{{ maildrop.version }}/"
+    removes: "maildrop/maildrop"
+
+- name: compile-src | maildrop | maildrop should be configured
+  shell: >
+    /bin/sh ./configure
+    --prefix={{ maildrop.install }}
+    --bindir={{ maildrop.install }}/bin
+    --sysconfdir={{ maildrop.install }}/etc
+    --localstatedir={{ maildrop.spool }}
+    --enable-sendmail=/usr/sbin/sendmail
+    --enable-keep-fromline=1
+    --enable-unicode
+    --with-etcdir={{ maildrop.install }}/etc
+  args:
+    chdir:   "{{ sendmail.workingdir }}/maildrop-{{ maildrop.version }}"
+    creates: "Makefile"
+
+- name: compile-src | maildrop | maildrop {{ maildrop.version }} should be compiled
+  register: make_maildrop_binary
+  shell: make
+  args:
+    chdir:   "{{ sendmail.workingdir }}/maildrop-{{ maildrop.version }}"
+    creates: "libs/maildrop/maildrop"
+
+- name: compile-src | maildrop | maildrop {{ maildrop.version }} should be installed
+  when: make_maildrop_binary.changed
+  shell: make install-strip
+  args:
+    chdir: "{{ sendmail.workingdir }}/maildrop-{{ maildrop.version }}"
+
+- name: compile-src | maildrop | owner of each binary should be changed
+  when: make_maildrop_binary.changed
+  file:
+    path:  "{{ maildrop.install }}/bin/{{ item }}"
+    mode:  "0755"
+    owner: "root"
+    group: "{{ sendmail.user.mta.group }}"
+    state: "file"
+  with_items: 
+    - "maildrop"
+    - "lockmail"
+
+#  ____ ____ ____ ____ ____ ____ ____ ____ 
+# ||s |||e |||n |||d |||m |||a |||i |||l ||
+# ||__|||__|||__|||__|||__|||__|||__|||__||
+# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+#
+- name: compile-src | Find object directory name
+  register: sendmail_object_directory
+  ignore_errors: true
+  changed_when: sendmail_object_directory.rc == 1
+  shell: printf "obj.%s.%s.%s" `uname -s` `uname -r` `uname -m`
+
+- name: compile-src | REBUILD | make clean
+  when: sendmail.rebuild == true
+  shell: make clean
+  args:
+    chdir:   "{{ sendmail.workingdir }}/sendmail-{{ sendmail.version }}/"
+    removes: "{{ sendmail_object_directory.stdout }}/sendmail/sendmail"
+
+- name: compile-src | site.config.m4 should be deployed
+  template:
+    src:   "usr/local/src/site.config.m4.j2"
+    dest:  "{{ sendmail.workingdir }}/sendmail-{{ sendmail.version }}/devtools/Site/site.config.m4"
+
+- name: compile-src | sendmail {{ sendmail.version }} should be compiled
+  register: make_sendmail_binary
+  shell: /bin/sh ./Build -c
+  args:
+    chdir:   "{{ sendmail.workingdir }}/sendmail-{{ sendmail.version }}"
+    creates: "{{ sendmail_object_directory.stdout }}/sendmail/sendmail"
+
+- name: compile-src | Each directory should be created
+  file:
+    path:  "{{ item }}"
+    state: "directory"
+  with_items:
+    - "/usr/share/man"
+    - "/var/spool"
+    - "/var/spool/queues"
+    - "/var/spool/cqueue"
+    - "/var/spool/hoststat"
+
+- name: compile-src | Sendmail should be installed
+  when: make_sendmail_binary.changed
+  shell: >
+    /bin/sh ./Build install
+  args:
+    chdir: "{{ sendmail.workingdir }}/sendmail-{{ sendmail.version }}"
+
+#  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
+# ||l |||i |||b |||m |||i |||l |||t |||e |||r ||
+# ||__|||__|||__|||__|||__|||__|||__|||__|||__||
+# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+#
+- name: compile-src | libmilter should be compiled
+  when: make_sendmail_binary.changed
+  register: make_libmilter_binary
+  shell: >
+    /bin/sh ./Build -c
+  args:
+    chdir:   "{{ sendmail.workingdir }}/sendmail-{{ sendmail.version }}/libmilter"
+    creates: "{{ sendmail_object_directory.stdout }}/libmilter/libmilter.a"
+
+- name: compile-src | libmilter should be installed
+  when: make_libmilter_binary.changed
+  shell: >
+    /bin/sh ./Build install
+  args:
+    chdir: "{{ sendmail.workingdir }}/sendmail-{{ sendmail.version }}/libmilter"
+
+#  ____ ____ ____ ____ ____ ____ ____ ____ 
+# ||v |||i |||r |||t |||m |||a |||i |||l ||
+# ||__|||__|||__|||__|||__|||__|||__|||__||
+# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+#
+- name: compile-src | Create directory {{ virtmail.install }}/sbin
+  file:
+    path:  "{{ virtmail.install }}/sbin"
+    mode:  "0755"
+    owner: "root"
+    state: "directory"
+
+- name: compile-src | Each command should be installed
+  template:
+    src:    "usr/local/sbin/{{ item }}.j2"
+    dest:   "{{ virtmail.install }}/sbin/{{ item }}"
+    mode:   "0755"
+    owner:  "root"
+    backup: "no"
+  with_items:
+    - "sendmailctl"
+    - "make-vmailbox"
+    - "make-sasl-passwd"
+

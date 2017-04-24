@@ -1,0 +1,20 @@
+---
+#                     _                 _ _  __          __     ___                     _ _               
+#  ___  ___ _ __   __| |_ __ ___   __ _(_) |/ /__ _ __ __\ \   / / |__   __ _ _ __   __| | | ___ _ __ ___ 
+# / __|/ _ \ '_ \ / _` | '_ ` _ \ / _` | | | / __| '__/ __| | / /| '_ \ / _` | '_ \ / _` | |/ _ \ '__/ __|
+# \__ \  __/ | | | (_| | | | | | | (_| | | | \__ \ | | (__| |/ / | | | | (_| | | | | (_| | |  __/ |  \__ \
+# |___/\___|_| |_|\__,_|_| |_| |_|\__,_|_|_| |___/_|  \___| /_/  |_| |_|\__,_|_| |_|\__,_|_|\___|_|  |___/
+#                                           \_\          /_/                                              
+# handlers file for ar-sendmail-src
+- name: Restart Sendmail
+  when: sendmail.started == true
+  service:
+    name:  "{{ sendmail.initscript }}"
+    state: "restarted"
+
+- name: Makemap DBs
+  shell: make {{ item.db }}
+  args:
+    chdir: "{{ sendmail.configroot }}"
+  with_items: "{{ sendmail.conf.databasemaps }}"
+
