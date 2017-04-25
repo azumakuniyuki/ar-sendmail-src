@@ -151,22 +151,6 @@
     owner: "root"
     state: "link"
 
-- name: make-config | submit.mc file should be deployed
-  register: submitmc
-  template:
-    src:   "etc/mail/submit.mc.j2"
-    dest:  "{{ sendmail.configroot }}/src/cf/cf/submit.mc"
-    owner: "root"
-    group: "{{ sendmail.user.msa.group }}"
-
-- name: make-config | sendmail.mc file should be deployed
-  register: sendmailmc
-  template:
-    src:   "etc/mail/sendmail.mc.j2"
-    dest:  "{{ sendmail.configroot }}/src/cf/cf/sendmail.mc"
-    owner: "root"
-    group: "{{ sendmail.user.mta.group }}"
-
 - name: make-config | virtmail.m4 file should be deployed
   register: virtmailm4
   template:
@@ -200,6 +184,47 @@
     chdir: "{{ sendmail.configroot }}"
   with_items:
     - "{{ sendmail.conf.dbmapfiles }}"
+
+- name: make-config | submit.mc file should be deployed
+  register: submitmc
+  template:
+    src:   "etc/mail/submit.mc.j2"
+    dest:  "{{ sendmail.configroot }}/src/cf/cf/submit.mc"
+    owner: "root"
+    group: "{{ sendmail.user.msa.group }}"
+
+- name: make-config | submit.cf file should be compiled
+  when: submitmc|changed
+  register: submitcf
+  shell: make submit.cf
+  args:
+    chdir: "{{ sendmail.configroot }}/src/cf/cf"
+
+- name: make-config | sendmail.mc file should be deployed
+  register: sendmailmc
+  template:
+    src:   "etc/mail/sendmail.mc.j2"
+    dest:  "{{ sendmail.configroot }}/src/cf/cf/sendmail.mc"
+    owner: "root"
+    group: "{{ sendmail.user.mta.group }}"
+
+- name: make-config | sendmail.cf file should be compiled
+  when: sendmailmc|changed
+  register: sendmailcf
+  shell: make sendmail.cf
+  args:
+    chdir: "{{ sendmail.configroot }}/src/cf/cf"
+
+- name: make-config | sendmail.cf and submit.cf should be installed
+  notify: Restart Sendmail
+  when: sendmailcf|changed or submitcf|changed
+  shell: make install-cf
+  args:
+    chdir:   "{{ sendmail.configroot }}/src/cf/cf"
+    creates: "{{ item }}"
+  with_items:
+    - "sendmail.cf"
+    - "submit.cf"
 
 - name: make-config | files should be deployed into {{ procmail.install }}
   template:
