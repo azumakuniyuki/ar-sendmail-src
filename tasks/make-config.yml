@@ -221,7 +221,6 @@
   shell: make install-cf
   args:
     chdir:   "{{ sendmail.configroot }}/src/cf/cf"
-    creates: "{{ item }}"
   with_items:
     - "sendmail.cf"
     - "submit.cf"
