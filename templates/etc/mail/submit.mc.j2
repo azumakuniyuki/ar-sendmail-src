@@ -18,7 +18,7 @@ define(`_USE_DECNET_SYNTAX_', `1')dnl support DECnet
 define(`confTIME_ZONE', `USE_TZ')dnl
 define(`confDONT_INIT_GROUPS', `True')dnl
 define(`STATUS_FILE',`-o /var/tmp/smsubmit.st')dnl
-define(`confPID_FILE',`/var/run/smsubmit.pid')dnl
+define(`confPID_FILE',`{{ sendmail.conf.msaqueue }}/smsubmit.pid')dnl
 define(`MSP_QUEUE_DIR',`{{ sendmail.conf.msaqueue }}')dnl
 define(`confTRUSTED_USER',`{{ sendmail.user.msa.username }}')dnl
 define(`confRUN_AS_USER',`{{ sendmail.user.msa.username }}:{{ sendmail.user.msa.group }}')dnl
