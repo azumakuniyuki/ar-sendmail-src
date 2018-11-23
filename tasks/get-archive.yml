@@ -14,7 +14,7 @@
     dest: "{{ sendmail.workingdir }}/procmail-{{ procmail.version }}.tar.gz"
 
 - name: get-archive | procmail-{{ procmail.verison }}.tar.gz should be extracted
-  when: get_procmail|failed
+  when: get_procmail is failed
   copy:
     src:  "procmail-{{ procmail.version }}.tar.gz"
     dest: "{{ sendmail.workingdir }}"
@@ -34,7 +34,7 @@
     dest: "{{ sendmail.workingdir }}/courier-unicode-1.4.tar.bz2"
 
 - name: get-archive | courier-unicode-1.4.tar.bz2 should be extracted
-  when: get_courier_unicode_lib|failed
+  when: get_courier_unicode_lib is failed
   copy:
     src:  "courier-unicode-1.4.tar.bz2"
     dest: "{{ sendmail.workingdir }}"
@@ -54,7 +54,7 @@
     dest: "{{ sendmail.workingdir }}/maildrop-{{ maildrop.version }}.tar.bz2"
 
 - name: get-archive | maildrop-{{ maildrop.verison }}.tar.bz2 should be deployed
-  when: get_maildrop|failed
+  when: get_maildrop is failed
   copy:
     src:  "maildrop-{{ maildrop.version }}.tar.bz2"
     dest: "{{ sendmail.workingdir }}"

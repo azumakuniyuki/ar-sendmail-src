@@ -34,7 +34,7 @@
         group: "root"
 
     - name: boot-script | RedHat | {{ sendmail.initscript }} should be reloaded
-      when: ansible_distribution_major_version > 6 and deploy_sendmail_service_unit|changed
+      when: ansible_distribution_major_version > 6 and deploy_sendmail_service_unit is changed
       shell: systemctl daemon-reload
 
     - name: boot-script | RedHat | Deploy /etc/sysconfig/{{ sendmail.initscript }} should be deployed
@@ -47,7 +47,7 @@
         backup: "yes"
 
     - name: boot-script | RedHat | {{ sendmail.initscript }} should be reloaded
-      when: ansible_distribution_major_version > 6 and deploy_sendmail_sysconfig|changed
+      when: ansible_distribution_major_version > 6 and deploy_sendmail_sysconfig is changed
       shell: systemctl daemon-reload
   when: ansible_os_family == "RedHat"
 

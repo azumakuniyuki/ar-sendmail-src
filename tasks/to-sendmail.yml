@@ -19,7 +19,7 @@
       shell: /bin/ls -l /etc/alternatives/mta | grep /usr/sbin/sendmail.sendmail
 
     - name: to-sendmail | RedHat | It should be switched to Sendmail
-      when: sendmail_binary|success and sendmail_link|failed
+      when: sendmail_binary is success and sendmail_link is failed
       shell: >
         /usr/sbin/alternatives --set mta /usr/sbin/sendmail.sendmail
   when: ansible_os_family == "RedHat"
