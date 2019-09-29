@@ -9,7 +9,6 @@
 - name: install-pkg | RedHat | Packages required by sendmail should be installed
   when: ansible_os_family == "RedHat"
   yum:
-    name:  "{{ item }}"
+    name:  "{{ sendmail.packages.redhat.install }}"
     state: "present"
-  with_items: "{{ sendmail.packages.redhat.install }}"
 
